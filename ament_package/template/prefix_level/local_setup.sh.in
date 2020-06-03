@@ -112,6 +112,26 @@ if [ -n "$AMENT_TRACE_SETUP_FILES" ]; then
   echo "${_ament_ordered_commands}"
   echo ">>>"
 fi
+
+# Save ordered command to cache file
+tmp_file=$(mktemp)
+cat > $tmp_file <<_END
+_ament_prefix_sh_source_script() {
+  if [ -f "\$1" ]; then
+    if [ -n "\$AMENT_TRACE_SETUP_FILES" ]; then
+      echo ". \"\$1\""
+    fi
+    . "\$1"
+  else
+    echo "not found: \"\$1\"" 1>&2
+  fi
+}
+_END
+echo "${_ament_ordered_commands}" >> $tmp_file
+
+# If find lock, it means other process is making env.cache. So skip
+flock -n -x "${ENV_CACHE_LOCK_FILE}" mv $tmp_file "${ENV_CACHE_FILE}" || true
+
 eval "${_ament_ordered_commands}"
 unset _ament_ordered_commands
 
